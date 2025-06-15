@@ -22,7 +22,7 @@ public class ProductService
 
     public async Task<List<Product>> GetAllProductsAsync()
     {
-        
+
         // Try to get from Redis cache first
         var cachedProducts = await _redis.StringGetAsync(_cacheKey);
         if (cachedProducts.HasValue)

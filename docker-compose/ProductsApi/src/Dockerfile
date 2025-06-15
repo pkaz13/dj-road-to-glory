@@ -20,6 +20,10 @@ RUN addgroup --system --gid 1001 appgroup && \
     adduser --system --uid 1001 --ingroup appgroup appuser && \
     chown -R appuser:appgroup /app
 
+# Install ICU(International Components for Unicode) for globalization support. Alpine distribution does not include it by default.
+RUN apk add --no-cache icu-libs
+ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
+
 # Copy published application
 COPY --from=build --chown=appuser:appgroup /app/publish .
 

@@ -20,9 +20,10 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // Add Redis
 builder.Services.AddSingleton<IConnectionMultiplexer>(provider =>
 {
-    var connectionString = builder.Configuration.GetConnectionString("Redis") 
+    var connectionString = builder.Configuration.GetConnectionString("Redis")
         ?? throw new InvalidOperationException("Redis connection string is not configured");
-    return ConnectionMultiplexer.Connect(connectionString);
+    var options = ConfigurationOptions.Parse(connectionString);
+    return ConnectionMultiplexer.Connect(options);
 });
 
 builder.Services.AddScoped<ProductService>();
@@ -62,26 +63,26 @@ async Task InitializeDatabaseAsync(IServiceProvider services)
     var logger = services.GetRequiredService<ILogger<Program>>();
     using var scope = services.CreateScope();
     var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    
+
     try
     {
         // Check if database can be connected to (this will return false if database doesn't exist)
         var canConnect = await context.Database.CanConnectAsync();
-        
+
         if (!canConnect)
         {
             logger.LogInformation("Database does not exist. Creating database and applying migrations...");
-            
+
             // This will create the database and apply all migrations
             await context.Database.MigrateAsync();
-            
+
             logger.LogInformation("Database created and migrations applied successfully.");
         }
         else
         {
             // Database exists, check if there are pending migrations
             var pendingMigrations = await context.Database.GetPendingMigrationsAsync();
-            
+
             if (pendingMigrations.Any())
             {
                 logger.LogInformation("Applying pending migrations...");
