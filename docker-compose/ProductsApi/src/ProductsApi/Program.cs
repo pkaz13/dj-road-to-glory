@@ -51,6 +51,10 @@ app.MapGet("/products", async (ProductService productService) =>
 .WithName("GetProducts")
 .WithOpenApi();
 
+// Health check endpoint
+app.MapGet("/health", () => Results.Ok(new { status = "Healthy" }))
+    .WithName("HealthCheck");
+
 app.Run();
 
 async Task InitializeDatabaseAsync(IServiceProvider services)
