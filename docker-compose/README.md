@@ -39,4 +39,7 @@ Docker Compose is a tool for defining and running multi-container Docker applica
 - Make it easy to share application setups with others.
 
 ### Resources
-[Perplexity AI: Docker Compose Explained](https://www.perplexity.ai/search/you-re-an-experienced-docker-a-4qfWa95bRYecW2WfewuXYA) – Tips and best practices for Docker Compose.
+- [Perplexity AI: Docker Compose Explained](https://www.perplexity.ai/search/you-re-an-experienced-docker-a-4qfWa95bRYecW2WfewuXYA) – Tips and best practices for Docker Compose.
+
+## Perplexity workspace
+- [Perplexity AI: Docker](https://www.perplexity.ai/collections/docker-PP9TSdZnROSJGaB7RXPuPw) – Collection of Perplexity AI threads covering advanced topics in Docker
