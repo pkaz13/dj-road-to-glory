@@ -1,0 +1,44 @@
+---
+description: 
+globs: **/Dockerfile*
+alwaysApply: false
+---
+---
+description: Best practices for Dockerfile optimization
+globs: **/Dockerfile
+alwaysApply: true
+---
+
+# Dockerfile Optimization Best Practices
+
+These guidelines outline essential techniques to create efficient, secure, and maintainable Docker images.
+
+## 1. Multi-Stage Builds
+- Use separate stages for building and runtime to minimize final image size by excluding build dependencies from the runtime image [1].
+
+## 2. Minimal Base Images
+- Choose lightweight base images (e.g., Alpine) to reduce image size and attack surface [2].
+
+## 3. Layer Caching Optimization
+- Order instructions from least to most frequently changing (e.g., copy dependencies and run restores before copying application code) to leverage Docker’s build cache [3].
+
+## 4. Minimize Layer Count
+- Combine related commands using `&&` within a single `RUN` instruction to reduce the number of image layers and overall size [4].
+
+## 5. .dockerignore Usage
+- Define a `.dockerignore` file to exclude unnecessary files and directories (e.g., build artifacts, logs, and credentials) from the build context, reducing build time and image size [5].
+
+## 6. Non-Root User
+- Create and switch to a non-root user to follow the principle of least privilege, improving container security [6].
+
+## 7. Package Manager Best Practices
+- Use `--no-cache` (for Alpine `apk`) or equivalent flags to avoid caching package indexes in the image and clean up temporary files within the same `RUN` instruction [7].
+
+## 8. Specific Version Tags
+- Reference explicit version tags (avoid `latest`) to ensure reproducible builds and controlled upgrades [8].
+
+## 9. Health Checks
+- Implement `HEALTHCHECK` directives to enable container orchestration platforms to monitor application health and restart unhealthy containers automatically [9].
+
+## 10. Environment Variables
+- Configure essential environment variables (e.g., `ASPNETCORE_ENVIRONMENT=Production`) to control application behavior at runtime [10].
