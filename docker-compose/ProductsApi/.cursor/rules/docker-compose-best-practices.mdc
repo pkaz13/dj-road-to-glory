@@ -3,6 +3,12 @@ description:
 globs: **/docker-compose*.yml
 alwaysApply: false
 ---
+---
+description: Best practices for Docker Compose
+globs: **/docker-compose*.yml
+alwaysApply: true
+---
+
 # Docker Compose Best Practices
 
 Enforces best practices for Docker Compose files in this project, including pinning image versions, using environment variables, logical service organization, persistent volumes, secure networking, version control hygiene, documentation, security, resource management, and multi-environment support. This rule ensures maintainable, secure, and reliable Docker Compose configurations
