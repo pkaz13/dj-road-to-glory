@@ -1,4 +1,5 @@
 apiVersion: 1
+
 datasources:
   - name: Loki
     type: loki
@@ -6,4 +7,4 @@ datasources:
     url: http://loki:3100
     editable: false
     jsonData:
-      maxLines: 1000 
+      maxLines: 1000

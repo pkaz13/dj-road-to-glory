@@ -3,6 +3,7 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Trace;
 using OpenTelemetry.Metrics;
+using Microsoft.Extensions.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -66,10 +67,20 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 // Define the GET /products endpoint
-app.MapGet("/products", async (ProductService productService) =>
+app.MapGet("/products", async (ILogger<Program> logger, ProductService productService) =>
 {
-    var products = await productService.GetProductsAsync();
-    return Results.Ok(products);
+    logger.LogInformation("GET /products endpoint called.");
+    try
+    {
+        var products = await productService.GetProductsAsync();
+        logger.LogInformation("GET /products succeeded. Returning {Count} products.", products.Count());
+        return Results.Ok(products);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Error in GET /products endpoint.");
+        return Results.Problem("An error occurred while retrieving products.");
+    }
 })
 .WithName("GetProducts")
 .WithOpenApi();
