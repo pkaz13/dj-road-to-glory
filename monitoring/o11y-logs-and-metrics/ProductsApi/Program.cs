@@ -3,25 +3,46 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Trace;
 using OpenTelemetry.Metrics;
-using Microsoft.Extensions.Logging;
+using Serilog;
+using ILogger = Serilog.ILogger;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure OpenTelemetry logging
 builder.Logging.ClearProviders();
-builder.Logging.AddOpenTelemetry(options =>
-{
-    options.IncludeFormattedMessage = true;
-    options.IncludeScopes = true;
-    options.ParseStateValues = true;
-    options.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("ProductsApi"));
-    options.AddOtlpExporter(otlpOptions =>
-    {
-        otlpOptions.Endpoint = new Uri("http://otel-collector:4318"); // http endpoint
-    });
-});
+builder.Host.UseSerilog((_, config) =>
+    config.ReadFrom.Configuration(builder.Configuration));
 
-// Optionally, add tracing and metrics as well
+
+////// Configure OpenTelemetry with default .NET logger - for some reason it doesn't work ////////
+
+// builder.Logging.ClearProviders();
+// builder.Logging.AddOpenTelemetry(options =>
+// {
+//     options.IncludeFormattedMessage = true;
+//     options.IncludeScopes = true;
+//     options.ParseStateValues = true;
+//     options.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("ProductsApi"));
+// });
+
+// if (builder.Environment.IsDevelopment())
+// {
+//     // In development, log to console
+//     builder.Logging.AddOpenTelemetry(x => x.AddConsoleExporter());
+// }
+
+// var otlpEndpoint = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"];
+// if (!string.IsNullOrEmpty(otlpEndpoint))
+// {
+//     Console.WriteLine($"Using OTLP endpoint: {otlpEndpoint}");
+//     builder.Services.Configure<OpenTelemetryLoggerOptions>(options =>
+//     {
+//         options.AddOtlpExporter();
+//     });
+// }
+
+/////////////////////////////////////////////
+
+//////// Optionally, add tracing and metrics as well //////////////////////
 // builder.Services.AddOpenTelemetry()
 //     .WithTracing(tracing =>
 //     {
@@ -46,6 +67,8 @@ builder.Logging.AddOpenTelemetry(options =>
 //             });
 //     });
 
+//////////////////////////////
+
 // Add services to the container
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -57,6 +80,8 @@ var app = builder.Build();
 
 app.MapHealthChecks("/health");
 
+app.UseSerilogRequestLogging();
+
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
@@ -67,18 +92,18 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 // Define the GET /products endpoint
-app.MapGet("/products", async (ILogger<Program> logger, ProductService productService) =>
+app.MapGet("/products", async (ILogger logger, ProductService productService) =>
 {
-    logger.LogInformation("GET /products endpoint called.");
+    logger.Information("GET /products endpoint called.");
     try
     {
         var products = await productService.GetProductsAsync();
-        logger.LogInformation("GET /products succeeded. Returning {Count} products.", products.Count());
+        logger.Information("GET /products succeeded. Returning {Count} products.", products.Count());
         return Results.Ok(products);
     }
     catch (Exception ex)
     {
-        logger.LogError(ex, "Error in GET /products endpoint.");
+        logger.Error(ex, "Error in GET /products endpoint.");
         return Results.Problem("An error occurred while retrieving products.");
     }
 })

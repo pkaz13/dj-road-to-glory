@@ -16,8 +16,10 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:8080
+      - OTEL_SERVICE_NAME=products-api
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
     depends_on:
       postgres:
         condition: service_healthy
@@ -52,8 +54,7 @@ services:
       - o11y-network
     secrets:
       - db_password
-    restart: 
-      unless-stopped
+    restart: unless-stopped
 
   pgadmin:
     image: dpage/pgadmin4:9
@@ -152,4 +153,4 @@ volumes:
 
 networks:
   o11y-network:
-    driver: bridge 
+    driver: bridge
