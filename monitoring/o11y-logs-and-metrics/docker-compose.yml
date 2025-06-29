@@ -146,11 +146,78 @@ services:
       retries: 3
       start_period: 40s
 
+  prometheus:
+    image: prom/prometheus:v3.3.1
+    container_name: prometheus
+    volumes:
+      - ./Prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./Prometheus/rules:/etc/prometheus/rules
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=7d'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    networks:
+      - o11y-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:9090/-/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.17.1
+    container_name: postgres-exporter
+    environment:
+      - DATA_SOURCE_NAME=postgresql://admin:Password1!@postgres:5432/productsdb?sslmode=disable
+    ports:
+      - "9187:9187"
+    networks:
+      - o11y-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:9187/metrics"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.0
+    container_name: alertmanager
+    volumes:
+      - ./alertmanager/config:/etc/alertmanager
+      - alertmanager-data:/data
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/data'
+    ports:
+      - "9093:9093"
+    networks:
+      - o11y-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:9093/-/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
 volumes:
   postgres-data:
   pgadmin-data:
   grafana-data:
   loki-data:
+  prometheus-data:
+  alertmanager-data:
 
 networks:
   o11y-network:

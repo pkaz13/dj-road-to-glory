@@ -7,6 +7,7 @@ using Serilog;
 using ILogger = Serilog.ILogger;
 using OpenTelemetry;
 using System.Diagnostics.Metrics;
+using System.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,17 +23,36 @@ var builder = WebApplication.CreateBuilder(args);
 //     .WithTracing(tracing =>
 //     {
 //         tracing
+//             .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("ProductsApi"))
 //             .AddAspNetCoreInstrumentation()
-//             .AddHttpClientInstrumentation();
+//             .AddHttpClientInstrumentation()
+//             .AddOtlpExporter(otlpOptions =>
+//             {
+//                 otlpOptions.Endpoint = new Uri("http://otel-collector:4318");
+//             });
 //     })
 //     .WithMetrics(metrics =>
 //     {
 //         metrics
+//             .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("ProductsApi"))
 //             .AddAspNetCoreInstrumentation()
-//             .AddHttpClientInstrumentation();
+//             .AddHttpClientInstrumentation()
+//             .AddOtlpExporter(otlpOptions =>
+//             {
+//                 otlpOptions.Endpoint = new Uri("http://otel-collector:4318");
+//             });
 //     });
 
 //////////////////////////////
+
+var meter = new Meter("ProductsApi");
+var requestsCounter = meter.CreateCounter<int>("api.requests.count", description: "Number of requests to the the api");
+var productsRequestsCounter = meter.CreateCounter<int>("api.products.requests.count", description: "Number of requests to the /products endpoint");
+var requestDuration = meter.CreateHistogram<double>("api.request.duration", 
+    unit: "ms", description: "Duration of API requests in milliseconds");
+var activeConnections = meter.CreateUpDownCounter<int>("api.active.connections", 
+    description: "Number of active connections");
+
 
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(resource => resource
@@ -40,7 +60,18 @@ builder.Services.AddOpenTelemetry()
         .AddAttributes(new Dictionary<string, object>
         {
             ["deployment.environment"] = builder.Environment.EnvironmentName
-        }));
+        }))
+        .WithMetrics(metrics =>
+        {
+            metrics
+                .AddAspNetCoreInstrumentation()
+                .AddHttpClientInstrumentation()
+                .AddMeter(meter.Name);
+                // .AddMeter("Microsoft.AspNetCore.Hosting")
+                // .AddMeter("Microsoft.AspNetCore.Server.Kestrel")
+                // .AddMeter("System.Net.Http")
+                // .AddMeter("System.Net.NameResolution");
+        });
 
 // Configure logging to be exported via OpenTelemetry
 // builder.Logging.ClearProviders(); //optional -> removes default logs from console in container
@@ -59,7 +90,7 @@ builder.Logging.AddOpenTelemetry(logging =>
 if (builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"] != null)
 {
     builder.Services.ConfigureOpenTelemetryLoggerProvider(logging => logging.AddOtlpExporter());
-    // builder.Services.ConfigureOpenTelemetryMeterProvider(metrics => metrics.AddOtlpExporter());
+    builder.Services.ConfigureOpenTelemetryMeterProvider(metrics => metrics.AddOtlpExporter());
     // builder.Services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.AddOtlpExporter());
 }
 
@@ -85,6 +116,27 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// Custom middleware to track active connections
+app.Use(async (context, next) =>
+{
+    activeConnections.Add(1);
+    var stopwatch = Stopwatch.StartNew();
+    
+    try
+    {
+        await next();
+    }
+    finally
+    {
+        stopwatch.Stop();
+        activeConnections.Add(-1);
+        requestDuration.Record(stopwatch.ElapsedMilliseconds, 
+            new("endpoint", context.Request.Path), 
+            new("method", context.Request.Method),
+            new("status_code", context.Response.StatusCode.ToString()));
+    }
+});
+
 // Define the GET /products endpoint
 app.MapGet("/products", async (ILogger<Program> logger, ProductService productService) =>
 {
@@ -93,11 +145,17 @@ app.MapGet("/products", async (ILogger<Program> logger, ProductService productSe
     {
         var products = await productService.GetProductsAsync();
         logger.LogInformation("GET /products succeeded. Returning {Count} products.", products.Count());
+
+        requestsCounter.Add(1, new("endpoint", "GET /products"), new("method", "GET"), new("status", "200"));
+        productsRequestsCounter.Add(1, new("endpoint", "GET /products"), new("method", "GET"), new("status", "200"));
         return Results.Ok(products);
     }
     catch (Exception ex)
     {
         logger.LogError(ex, "Error in GET /products endpoint.");
+        requestsCounter.Add(1, new("endpoint", "GET /products"), new("method", "GET"), new("status", "500"));
+        productsRequestsCounter.Add(1, new("endpoint", "GET /products"), new("method", "GET"), new("status", "500"));
+
         return Results.Problem("An error occurred while retrieving products.");
     }
 })
