@@ -13,16 +13,6 @@ receivers:
           scrape_interval: 10s
           static_configs:
             - targets: ['postgres-exporter:9187']
-        # Scrape Prometheus itself
-        # - job_name: 'prometheus'
-        #   scrape_interval: 10s
-        #   static_configs:
-        #     - targets: ['prometheus:9090']
-        # Scrape the OpenTelemetry Collector
-        # - job_name: 'otel-collector'
-        #   scrape_interval: 10s
-        #   static_configs:
-        #     - targets: ['0.0.0.0:8889']
 
 exporters:
   otlphttp/loki:
@@ -31,6 +21,7 @@ exporters:
       insecure: true
   prometheus:
     endpoint: "0.0.0.0:8889"
+    namespace: "otelcol"
     const_labels:
       service: otel-collector
 

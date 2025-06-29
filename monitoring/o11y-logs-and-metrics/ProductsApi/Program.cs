@@ -16,38 +16,8 @@ var builder = WebApplication.CreateBuilder(args);
 // builder.Host.UseSerilog((_, config) =>
 //     config.ReadFrom.Configuration(builder.Configuration));
 
-/////////////////////////////////////////////
-
-//////// Optionally, add tracing and metrics as well //////////////////////
-// builder.Services.AddOpenTelemetry()
-//     .WithTracing(tracing =>
-//     {
-//         tracing
-//             .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("ProductsApi"))
-//             .AddAspNetCoreInstrumentation()
-//             .AddHttpClientInstrumentation()
-//             .AddOtlpExporter(otlpOptions =>
-//             {
-//                 otlpOptions.Endpoint = new Uri("http://otel-collector:4318");
-//             });
-//     })
-//     .WithMetrics(metrics =>
-//     {
-//         metrics
-//             .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("ProductsApi"))
-//             .AddAspNetCoreInstrumentation()
-//             .AddHttpClientInstrumentation()
-//             .AddOtlpExporter(otlpOptions =>
-//             {
-//                 otlpOptions.Endpoint = new Uri("http://otel-collector:4318");
-//             });
-//     });
-
-//////////////////////////////
-
 var meter = new Meter("ProductsApi");
 var requestsCounter = meter.CreateCounter<int>("api.requests.count", description: "Number of requests to the the api");
-var productsRequestsCounter = meter.CreateCounter<int>("api.products.requests.count", description: "Number of requests to the /products endpoint");
 var requestDuration = meter.CreateHistogram<double>("api.request.duration", 
     unit: "ms", description: "Duration of API requests in milliseconds");
 var activeConnections = meter.CreateUpDownCounter<int>("api.active.connections", 
@@ -66,11 +36,10 @@ builder.Services.AddOpenTelemetry()
             metrics
                 .AddAspNetCoreInstrumentation()
                 .AddHttpClientInstrumentation()
-                .AddMeter(meter.Name);
-                // .AddMeter("Microsoft.AspNetCore.Hosting")
-                // .AddMeter("Microsoft.AspNetCore.Server.Kestrel")
-                // .AddMeter("System.Net.Http")
-                // .AddMeter("System.Net.NameResolution");
+                .AddMeter(meter.Name)
+                .AddView("api.request.duration", new ExplicitBucketHistogramConfiguration{
+                    Boundaries = [50, 100, 500, 1000, 2000, 2500, 5000, 10000]
+                });
         });
 
 // Configure logging to be exported via OpenTelemetry
@@ -131,7 +100,7 @@ app.Use(async (context, next) =>
         stopwatch.Stop();
         activeConnections.Add(-1);
         requestDuration.Record(stopwatch.ElapsedMilliseconds, 
-            new("endpoint", context.Request.Path), 
+            new("endpoint", context.Request.Path),
             new("method", context.Request.Method),
             new("status_code", context.Response.StatusCode.ToString()));
     }
@@ -143,23 +112,52 @@ app.MapGet("/products", async (ILogger<Program> logger, ProductService productSe
     logger.LogInformation("GET /products endpoint called.");
     try
     {
+        await Task.Delay(TimeSpan.FromSeconds(2)); //simulate longer fetch from database
         var products = await productService.GetProductsAsync();
         logger.LogInformation("GET /products succeeded. Returning {Count} products.", products.Count());
 
         requestsCounter.Add(1, new("endpoint", "GET /products"), new("method", "GET"), new("status", "200"));
-        productsRequestsCounter.Add(1, new("endpoint", "GET /products"), new("method", "GET"), new("status", "200"));
         return Results.Ok(products);
     }
     catch (Exception ex)
     {
         logger.LogError(ex, "Error in GET /products endpoint.");
         requestsCounter.Add(1, new("endpoint", "GET /products"), new("method", "GET"), new("status", "500"));
-        productsRequestsCounter.Add(1, new("endpoint", "GET /products"), new("method", "GET"), new("status", "500"));
 
         return Results.Problem("An error occurred while retrieving products.");
     }
 })
 .WithName("GetProducts")
+.WithOpenApi();
+
+app.MapGet("/products/{productId:int}", async (ILogger<Program> logger, ProductService productService, int productId) =>
+{
+    logger.LogInformation("GET /products/{ProductId} endpoint called.", productId);
+    try
+    {
+        var product = await productService.GetProductByIdAsync(productId);
+        if (product is null)
+        {
+            logger.LogWarning("Product with ID {ProductId} not found.", productId);
+            requestsCounter.Add(1, new("endpoint", $"GET /products/{productId}"), new("method", "GET"), new("status", "404"));
+
+            return Results.NotFound($"Product with ID {productId} not found.");
+        }
+
+        logger.LogInformation("GET /product/{ProductId} succeeded.", productId);
+        requestsCounter.Add(1, new("endpoint", $"GET /products/{productId}"), new("method", "GET"), new("status", "200"));
+
+        return Results.Ok(product);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Error in GET /products/{ProductId} endpoint.", productId);
+        requestsCounter.Add(1, new("endpoint", $"GET /products/{productId}"), new("method", "GET"), new("status", "500"));
+        
+        return Results.Problem($"An error occurred while retrieving product with ID {productId}.");
+    }
+})
+.WithName("GetProductById")
 .WithOpenApi();
 
 app.Run();

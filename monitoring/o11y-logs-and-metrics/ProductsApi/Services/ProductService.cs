@@ -43,4 +43,39 @@ public class ProductService(IConfiguration configuration)
         
         return products;
     }
+
+    public async Task<Product?> GetProductByIdAsync(int productId)
+    {
+        using var connection = new NpgsqlConnection(_connectionString);
+        await connection.OpenAsync();
+
+        using var command = new NpgsqlCommand(
+            @"SELECT p.id, p.name, p.description, p.price, p.category_id, 
+                     c.name as category_name, c.description as category_description
+              FROM products p
+              JOIN categories c ON p.category_id = c.id
+              WHERE p.id = @id", connection);
+        command.Parameters.AddWithValue("@id", productId);
+
+        using var reader = await command.ExecuteReaderAsync();
+        if (await reader.ReadAsync())
+        {
+            return new Product
+            {
+                Id = reader.GetInt32(0),
+                Name = reader.GetString(1),
+                Description = reader.GetString(2),
+                Price = reader.GetDecimal(3),
+                CategoryId = reader.GetInt32(4),
+                Category = new Category
+                {
+                    Id = reader.GetInt32(4),
+                    Name = reader.GetString(5),
+                    Description = reader.GetString(6)
+                }
+            };
+        }
+        
+        return null;
+    }
 }
