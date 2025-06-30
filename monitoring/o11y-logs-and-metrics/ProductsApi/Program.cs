@@ -23,6 +23,8 @@ var requestDuration = meter.CreateHistogram<double>("api.request.duration",
 var activeConnections = meter.CreateUpDownCounter<int>("api.active.connections", 
     description: "Number of active connections");
 
+var activitySource = new ActivitySource("ProductsApi");
+builder.Services.AddSingleton(activitySource);
 
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(resource => resource
@@ -31,16 +33,23 @@ builder.Services.AddOpenTelemetry()
         {
             ["deployment.environment"] = builder.Environment.EnvironmentName
         }))
-        .WithMetrics(metrics =>
-        {
-            metrics
-                .AddAspNetCoreInstrumentation()
-                .AddHttpClientInstrumentation()
-                .AddMeter(meter.Name)
-                .AddView("api.request.duration", new ExplicitBucketHistogramConfiguration{
-                    Boundaries = [50, 100, 500, 1000, 2000, 2500, 5000, 10000]
-                });
-        });
+    .WithMetrics(metrics =>
+    {
+        metrics
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddMeter(meter.Name)
+            .AddView("api.request.duration", new ExplicitBucketHistogramConfiguration{
+                Boundaries = [50, 100, 500, 1000, 2000, 2500, 5000, 10000]
+            });
+    })
+    .WithTracing(tracing =>
+    {
+        tracing
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddSource(activitySource.Name);
+    });
 
 // Configure logging to be exported via OpenTelemetry
 // builder.Logging.ClearProviders(); //optional -> removes default logs from console in container
@@ -60,7 +69,7 @@ if (builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"] != null)
 {
     builder.Services.ConfigureOpenTelemetryLoggerProvider(logging => logging.AddOtlpExporter());
     builder.Services.ConfigureOpenTelemetryMeterProvider(metrics => metrics.AddOtlpExporter());
-    // builder.Services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.AddOtlpExporter());
+    builder.Services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.AddOtlpExporter());
 }
 
 // Add services to the container
