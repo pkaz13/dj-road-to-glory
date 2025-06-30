@@ -1,0 +1,33 @@
+flowchart TD
+  subgraph API
+    ProductsAPI["Products API"]
+  end
+  subgraph DB
+    Postgres["PostgreSQL"]
+    PgAdmin["pgAdmin"]
+    PostgresExporter["Postgres Exporter"]
+  end
+  subgraph OTel["OpenTelemetry Collector"]
+    OtelCollector["Otel Collector"]
+  end
+  subgraph Monitoring
+    Prometheus["Prometheus"]
+    Grafana["Grafana"]
+    Loki["Loki"]
+    Tempo["Tempo"]
+    Alertmanager["Alertmanager"]
+  end
+
+  ProductsAPI -- "DB connection" --> Postgres
+  PgAdmin -- "Manages" --> Postgres
+  PostgresExporter -- "Scrapes metrics" --> Postgres
+  Prometheus -- "Scrapes metrics" --> OtelCollector
+  Prometheus -- "Scrapes metrics" --> PostgresExporter
+  Prometheus -- "Sends alerts" --> Alertmanager
+  Grafana -- "Visualizes" --> Prometheus
+  Grafana -- "Visualizes" --> Loki
+  Grafana -- "Visualizes" --> Tempo
+  ProductsAPI -- "OTLP (logs, metrics, traces)" --> OtelCollector
+  OtelCollector -- "Exports logs" --> Loki
+  OtelCollector -- "Exports metrics" --> Prometheus
+  OtelCollector -- "Exports traces" --> Tempo 
