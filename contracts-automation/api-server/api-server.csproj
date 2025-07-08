@@ -14,4 +14,16 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
   </ItemGroup>
 
+  <!-- OPTIONAL: Generate API clients on build -->
+  <!-- <PropertyGroup>
+    <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
+  </PropertyGroup>
+
+  <Target Name="GenerateApiClients" BeforeTargets="Build" Condition="'$(Configuration)' == 'Debug'">
+    <Exec WorkingDirectory="$(ProjectDir)../contracts-nswag" 
+          Command="npm run build" 
+          ContinueOnError="false" />
+  </Target> -->
+  <!-- END OPTIONAL: Generate API clients on build -->
+
 </Project>
