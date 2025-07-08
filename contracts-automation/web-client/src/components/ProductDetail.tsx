@@ -13,7 +13,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ productId }) => {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const client = new Client('http://localhost:5000');
+        const client = new Client('http://localhost:5050');
         const result = await client.getProduct(productId);
         setProduct(result);
       } catch (err) {

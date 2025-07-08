@@ -9,7 +9,7 @@ const Products: React.FC = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const client = new Client('http://localhost:5000');
+        const client = new Client('http://localhost:5050');
         const result = await client.getProducts();
         setProducts(result);
       } catch (err) {
