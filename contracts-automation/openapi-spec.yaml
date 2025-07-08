@@ -1,0 +1,63 @@
+openapi: 3.0.3
+info:
+  title: Products API
+  description: API for managing products
+  version: 1.0.0
+servers:
+  - url: http://localhost:5000
+    description: Development server
+paths:
+  /api/products:
+    get:
+      summary: Get all products
+      operationId: getProducts
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductDto'
+  /api/products/{id}:
+    get:
+      summary: Get product by ID
+      operationId: getProduct
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDto'
+        '404':
+          description: Product not found
+components:
+  schemas:
+    ProductDto:
+      type: object
+      required:
+        - id
+        - name
+        - price
+      properties:
+        id:
+          type: integer
+          format: int32
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+          format: double
+        createdDate:
+          type: string
+          format: date-time
