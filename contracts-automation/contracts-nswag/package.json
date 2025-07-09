@@ -1,0 +1,21 @@
+{
+  "name": "contracts-nswag",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "clean": "rimraf output/*",
+    "generate": "npm run clean && nswag run /runtime:Net80",
+    "copy": "node copy-contracts.js",
+    "build": "npm run clean && npm run generate && npm run copy"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "nswag": "^14.4.0"
+  },
+  "dependencies": {
+    "rimraf": "^6.0.1"
+  }
+}
