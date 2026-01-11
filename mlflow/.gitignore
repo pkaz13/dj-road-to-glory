@@ -221,3 +221,5 @@ __marimo__/
 
 #mlflow
 mlflow.db
+mlruns/
+mlartifacts/
