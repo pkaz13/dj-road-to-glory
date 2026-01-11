@@ -90,3 +90,12 @@ na
 
 ```python
 python -c 'from mlflow.claude_code.hooks import stop_hook_handler; stop_hook_handler()'
+
+## lokalne modele
+
+- stawianie lokalnego modelu:
+  - ollama: `ollama run <MODEL>` np. `ollama run gemma3:27b`
+  - llama.cpp: `llama-server -m <PATH>/<MODEL>` np. `llama-server -m ~/Library/Caches/llama.cpp/bartowski_Meta-Llama-3.1-8B-Instruct-GGUF_Meta-Llama-3.1-8B-Instruct-Q8_0.gguf`
+    - lub to samo tylko `llama-cli` zamiast `llama-server`, np. `llama-cli -m ~/Library/Caches/llama.cpp/bartowski_Meta-Llama-3.1-8B-Instruct-GGUF_Meta-Llama-3.1-8B-Instruct-Q8_0.gguf`
+- upewnij się, że `PORT` się zgadza
+- `ollama` wymaga poprawnej nazwy modelu (bo serwer ma ich wiele), zaś dla `llama.cpp` - jej to obojętne
