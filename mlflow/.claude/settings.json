@@ -1,0 +1,5 @@
+{
+  "environment": {
+    "MLFLOW_TRACKING_URI": "file:./mlruns"
+  }
+}
