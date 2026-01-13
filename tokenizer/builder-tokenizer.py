@@ -1,7 +1,7 @@
 import os
 from typing import List
 from tokenizers import Tokenizer, models, pre_tokenizers, decoders, trainers, processors
-from corpora import get_corpus_file
+from corpora import CORPORA_FILES
 
 def train_dynamic_tokenizer(corpus_files: List[str], corpus_name: str, vocab_size: int = 30000):
     """
@@ -57,13 +57,13 @@ def train_dynamic_tokenizer(corpus_files: List[str], corpus_name: str, vocab_siz
     print(f"Success! Tokenizer saved to: {output_path}")
 
 if __name__ == "__main__":
-    # --- CONFIGURATION ---
-    
-    # NKJP corpus
-    # Ensure this files exist in your 'data' folder
-    corpus_files = [str(file) for file in get_corpus_file("NKJP", "*.txt")]
-    corpus_name = "nkjp" 
 
+    # Switch key to change corpus
+    corpus_files = [str(file) for file in CORPORA_FILES["NKJP"]]
+    corpus_name = "nkjp"
+
+    print(f"Total files to train on: {len(corpus_files)}")
+    
     # Run the training
     try:
         train_dynamic_tokenizer(corpus_files, corpus_name, vocab_size=32000)
