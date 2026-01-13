@@ -3,10 +3,10 @@ from typing import List
 from tokenizers import Tokenizer, models, pre_tokenizers, decoders, trainers, processors
 from corpora import CORPORA_FILES
 
-def train_dynamic_tokenizer(corpus_files: List[str], corpus_name: str, vocab_size: int = 30000):
+def train_dynamic_tokenizer(corpus_files: List[str], corpus_name: str, vocab_size: int):
     """
     Trains a BPE tokenizer on the provided corpus files and saves it to a JSON file.
-    
+
     Args:
         corpus_files: List of paths to text files containing the training data.
         corpus_name: Name of the corpus (used for output filename).
@@ -58,14 +58,23 @@ def train_dynamic_tokenizer(corpus_files: List[str], corpus_name: str, vocab_siz
 
 if __name__ == "__main__":
 
-    # Switch key to change corpus
-    corpus_files = [str(file) for file in CORPORA_FILES["NKJP"]]
-    corpus_name = "nkjp"
+    # Define vocabulary sizes to train
+    vocab_sizes = [16000, 32000, 60000, 80000]
+    vocab_size_names = {16000: "16k", 32000: "32k", 60000: "60k", 80000: "80k"}
 
-    print(f"Total files to train on: {len(corpus_files)}")
-    
-    # Run the training
-    try:
-        train_dynamic_tokenizer(corpus_files, corpus_name, vocab_size=32000)
-    except Exception as e:
-        print(f"Error during training: {e}")
+    # Corpora to train on
+    corpora_to_train = ["NKJP", "WOLNELEKTURY", "PAN_TADEUSZ", "ALL"]
+
+    for corpus_name in corpora_to_train:
+        corpus_files = [str(file) for file in CORPORA_FILES[corpus_name]]
+        print(f"\n=== Training tokenizers for corpus: {corpus_name} ===")
+        print(f"Total files to train on: {len(corpus_files)}")
+
+        for vocab_size in vocab_sizes:
+            vocab_name = vocab_size_names[vocab_size]
+            print(f"\nTraining {corpus_name}-{vocab_name} tokenizer (vocab_size: {vocab_size})...")
+
+            try:
+                train_dynamic_tokenizer(corpus_files, f"{corpus_name.lower()}-{vocab_name}", vocab_size)
+            except Exception as e:
+                print(f"Error during training {corpus_name}-{vocab_name}: {e}")

@@ -1,40 +1,55 @@
 # Tokenizer Project
 
-A project for building and managing custom tokenizers trained on various corpora using Byte-Pair Encoding (BPE).
+A project for building and managing custom tokenizers trained on various Polish language corpora using Byte-Pair Encoding (BPE).
 
 ## Project Structure
 
 ### Data Folder (`data/`)
-Contains corpus datasets used for training tokenizers. Currently includes:
-- `nkjp/` - NKJP (National Corpus of Polish) dataset with 3,889 text files containing Polish language data
+Contains corpus datasets used for training and testing tokenizers:
+- `nkjp/` - NKJP (National Corpus of Polish) with ~3,889 text files
+- `wolnelektury/` - Wolne Lektury corpus (Polish literature, including Pan Tadeusz)
+- `mini/` - Small test files for tokenizer evaluation (e.g., Wikipedia articles, Gutenberg texts)
 
 ### Tokenizers Folder (`tokenizers/`)
-Stores trained tokenizer models in JSON format:
-- `nkjp-tokenizer.json` - BPE tokenizer trained on the NKJP corpus
+Stores trained tokenizer models in JSON format. Includes:
+- Pre-trained models (Bielik v1/v2/v3, DeepSeek)
+- Custom-trained tokenizers with varying vocabulary sizes (16k, 32k, 60k, 80k) for each corpus
+
+### Logs Folder (`logs/`)
+Generated during tokenizer evaluation. Contains:
+- Individual test results for each text sample
+- Summary of most effective tokenizers across all test cases
 
 ### Core Files
 
 #### `builder-tokenizer.py`
-Main script for training custom BPE tokenizers. Features include:
-- Byte-level pre-tokenization for handling Unicode characters
-- Configurable vocabulary size (default: 32,000 tokens)
-- Special tokens support: `[UNK]`, `[CLS]`, `[SEP]`, `[PAD]`, `[MASK]`
-- Memory-efficient training on large corpora
-- Automatic output to the `tokenizers/` directory
+Trains BPE tokenizers on selected corpora with multiple vocabulary sizes. Iterates through corpus combinations (NKJP, WOLNELEKTURY, PAN_TADEUSZ, ALL) and vocab sizes (16k, 32k, 60k, 80k), generating tokenizers for each combination. Uses ByteLevel pre-tokenization and saves models to `tokenizers/`.
 
 #### `corpora.py`
-Utility module for loading and managing corpus data:
-- Defines available corpora directories and file collections
-- Provides `get_corpus_file()` function for pattern-based file selection
-- Supports glob patterns for flexible corpus file filtering
-- Currently configured for NKJP corpus data
+Corpus management utility that maps corpus names to data directories and file collections. Defines NKJP, WOLNELEKTURY, PAN_TADEUSZ (subset of Wolne Lektury), and ALL (combined corpora without duplicates). Provides `get_corpus_file()` for pattern-based file retrieval.
+
+#### `run-tokenize-text.py`
+Evaluates and compares tokenizer efficiency on test texts. Loads all available tokenizers, encodes predefined test texts (Pan Tadeusz excerpt, English texts), counts tokens for each tokenizer, and generates comparative logs showing which tokenizer produces the most compact encoding for each text.
 
 ## Usage
 
-1. Ensure corpus data is available in the `data/` folder
-2. Configure tokenizer parameters in `builder-tokenizer.py`
-3. Run `python builder-tokenizer.py` to train a new tokenizer
-4. Trained tokenizers are automatically saved to `tokenizers/` folder
+### Training Tokenizers
+```bash
+python builder-tokenizer.py
+```
+Trains multiple tokenizers across all corpus combinations and vocabulary sizes.
+
+### Evaluating Tokenizers
+```bash
+python run-tokenize-text.py
+```
+Compares all tokenizers on test texts and generates detailed efficiency reports in `logs/`.
+
+### Managing Corpora
+```bash
+python corpora.py
+```
+Displays available corpora and file counts.
 
 ## Dependencies
 
