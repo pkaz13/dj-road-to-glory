@@ -2,6 +2,9 @@
 
 A project for building and managing custom tokenizers trained on various Polish language corpora using Byte-Pair Encoding (BPE).
 
+## Gemini thread
+https://gemini.google.com/share/c688827e6d56
+
 ## Project Structure
 
 ### Data Folder (`data/`)

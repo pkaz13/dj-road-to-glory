@@ -20,11 +20,11 @@ def train_dynamic_tokenizer(corpus_files: List[str], corpus_name: str, vocab_siz
     # 2. Pre-tokenization
     # ByteLevel is popular for LLMs (like GPT-2/Mistral). It handles unicode characters 
     # directly at the byte level, ensuring no "unknown" characters usually.
-    tokenizer.pre_tokenizer = pre_tokenizers.ByteLevel(add_prefix_space=False)
+    tokenizer.pre_tokenizer = pre_tokenizers.Whitespace()
 
     # 3. Decoding
     # This ensures we can reverse the process (IDs -> Text) correctly.
-    tokenizer.decoder = decoders.ByteLevel()
+    #tokenizer.decoder = decoders.Whitespace()
 
     # 4. Post-processing
     # Not strictly necessary for raw training, but useful if you want to mimic 
@@ -35,9 +35,9 @@ def train_dynamic_tokenizer(corpus_files: List[str], corpus_name: str, vocab_siz
     # The trainer manages the vocabulary learning process.
     # special_tokens are critical for LLMs (Unknown, Beginning of Sentence, End of Sentence, Padding).
     trainer = trainers.BpeTrainer(
-        vocab_size=vocab_size,
-        special_tokens=["[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]"],
-        initial_alphabet=pre_tokenizers.ByteLevel.alphabet()
+        vocab_size=vocab_size, #The size of the final vocabulary, including all tokens and alphabet.
+        special_tokens=["[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]"], #A list of special tokens the model should know of.
+        min_frequency=2, #The minimum frequency a pair should have in order to be merged.
     )
 
     print(f"Starting training for corpus: '{corpus_name}'...")
