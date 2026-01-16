@@ -2,14 +2,15 @@
 
 Gemini thread: https://gemini.google.com/share/02412e72714a
 
-This repository contains Python implementations for training and testing word/document embeddings using two complementary architectures:
-* **Word2Vec CBOW** - For learning word-level representations
-* **Doc2Vec PV-DM** - For learning sentence/document-level representations
+This repository contains Python implementations for training and testing word/document embeddings using three complementary architectures:
+* **Word2Vec CBOW** - For learning word-level representations from scratch
+* **Doc2Vec PV-DM** - For learning sentence/document-level representations from scratch
+* **Sentence-BERT (SBERT)** - For leveraging pre-trained transformer models for semantic sentence search
 
-Both implementations are specifically designed to work with subword tokenizers (like BPE), enabling the models to handle complex morphology by aggregating sub-unit vectors.
+Word2Vec and Doc2Vec implementations are specifically designed to work with subword tokenizers (like BPE), enabling the models to handle complex morphology by aggregating sub-unit vectors. SBERT uses pre-trained multilingual transformer models for state-of-the-art semantic similarity.
 
 ## 1. Project Overview
-The project provides two separate embedding pipelines, each split into training and inference scripts:
+The project provides three separate embedding pipelines with different approaches and use cases:
 
 ### Word2Vec CBOW Pipeline
 * **`run-train-cbow.py`** - Trains word-level embeddings (predicts target word from context)
@@ -19,7 +20,11 @@ The project provides two separate embedding pipelines, each split into training 
 * **`run-train-doc2vec.py`** - Trains document-level embeddings (learns sentence representations)
 * **`run-inference-doc2vec.py`** - Finds similar sentences from the corpus
 
-Both implementations utilize the **Gensim** library, a robust framework for unsupervised topic modeling and natural language processing.
+### Sentence-BERT (SBERT) Pipeline
+* **`generate-sbert.py`** - Generates sentence embeddings using pre-trained transformers
+* **`search_sbert.py`** - Interactive semantic search system with real-time queries
+
+Word2Vec and Doc2Vec implementations utilize the **Gensim** library, while SBERT uses the **Sentence-Transformers** library with pre-trained multilingual models (e.g., `intfloat/multilingual-e5-small`).
 
 ### What is Word2Vec CBOW?
 The **Continuous Bag of Words (CBOW)** model predicts a target word based on the context of its surrounding words. 
@@ -33,6 +38,13 @@ The **Paragraph Vector - Distributed Memory (PV-DM)** model learns fixed-length 
 * **Performance:** PV-DM acts like a memory that remembers what is missing from the current context, capturing the topic/theme of the document.
 * **Use Case:** Find semantically similar sentences or documents, useful for search and recommendation systems.
 
+### What is Sentence-BERT (SBERT)?
+**Sentence-BERT** is a modification of BERT that uses siamese and triplet network structures to derive semantically meaningful sentence embeddings from pre-trained transformer models.
+* **Mechanism:** Uses pre-trained multilingual models (like E5) that have been fine-tuned on millions of sentence pairs for semantic similarity.
+* **Performance:** State-of-the-art quality for semantic search, significantly better than averaging word embeddings. Much faster inference than BERT's sentence-pair classification.
+* **Use Case:** Production-ready semantic search, question answering, clustering, and information retrieval with minimal training required.
+* **Trade-off:** Requires more computational resources and larger models compared to Word2Vec/Doc2Vec, but provides superior semantic understanding.
+
 
 
 ---
@@ -41,22 +53,28 @@ The **Paragraph Vector - Distributed Memory (PV-DM)** model learns fixed-length 
 
 ```
 embedding/
-├── config.py                           # Shared configuration for both models
+├── config.py                           # Shared configuration for all models
 ├── corpora.py                          # Corpus file paths for training
 ├── utils.py                            # Shared utility functions
 ├── requirements.txt                    # Python dependencies
 │
 ├── run-train-cbow.py                  # Word2Vec training (Stages 1-3)
 ├── run-inference-cbow.py              # Word2Vec inference (Stage 4)
+│
 ├── run-train-doc2vec.py               # Doc2Vec training
 ├── run-inference-doc2vec.py           # Doc2Vec inference
+│
+├── generate-sbert.py                  # SBERT embeddings generation
+├── search_sbert.py                    # SBERT interactive search
 │
 ├── output/                            # Generated model artifacts
 │   ├── embedding_tensor_cbow.npy
 │   ├── embedding_token_to_index_map.json
 │   ├── embedding_word2vec_cbow_model.model
 │   ├── embedding_doc2vec_model.model
-│   └── embedding_doc2vec_sentence_map.json
+│   ├── embedding_doc2vec_sentence_map.json
+│   ├── sbert_sentence_embeddings.npy
+│   └── sbert_sentences_map.json
 │
 └── logs/                              # Inference results with timestamps
     ├── word2vec_cbow-results-*.log
@@ -66,11 +84,12 @@ embedding/
 ### Core Files
 
 #### Configuration & Utilities
-* **`config.py`** - Centralized configuration for both Word2Vec and Doc2Vec models:
+* **`config.py`** - Centralized configuration for all three embedding models:
   - Tokenizer and output directory paths
   - `TRAINING_PARAMS` - Word2Vec CBOW hyperparameters
   - `TRAINING_PARAMS_DOC2VEC` - Doc2Vec PV-DM hyperparameters
-  - Model names and output file names
+  - Output file names for Word2Vec, Doc2Vec, and SBERT
+  - Model names for logging
 
 * **`corpora.py`** - Defines corpus file paths for training:
   - `CORPORA_DIRS` - Dictionary mapping corpus names to directory paths (NKJP, WOLNELEKTURY)
@@ -78,9 +97,14 @@ embedding/
   - Helper function `get_corpus_file()` for selective corpus access
 
 * **`utils.py`** - Shared utility functions:
-  - `aggregate_raw_sentences()` - Loads and aggregates text from multiple files, used by both training scripts
+  - `aggregate_raw_sentences()` - Loads and aggregates text from multiple files, used by training scripts
 
-* **`requirements.txt`** - Python package dependencies (numpy, gensim, tokenizers)
+* **`requirements.txt`** - Python package dependencies:
+  - `tokenizers` - For BPE tokenization (Word2Vec/Doc2Vec)
+  - `numpy` - For numerical operations and embedding storage
+  - `gensim` - For Word2Vec and Doc2Vec implementations
+  - `sentence-transformers` - For SBERT pre-trained models
+  - `huggingface_hub[cli]` - For downloading pre-trained transformer models
 
 ---
 
@@ -146,6 +170,31 @@ Both Word2Vec and Doc2Vec follow similar training and inference workflows:
 
 ---
 
+### Sentence-BERT (SBERT) Pipeline
+
+#### Generation Script (`generate-sbert.py`)
+
+**Stage 1: Embedding Generation (Lines 28-79)**
+* **Configuration:** Uses pre-trained model `intfloat/multilingual-e5-small` from HuggingFace
+* **Aggregation:** Uses `aggregate_raw_sentences()` from `utils.py` to load corpus
+* **Model Loading:** Downloads and loads pre-trained Sentence-Transformer model
+* **Encoding:** Generates dense vector representations for all sentences in one batch
+* **Persistence:** Saves two files:
+  - **Embeddings Array:** `.npy` file with all sentence vectors (shape: [num_sentences, 384])
+  - **Sentence Map:** `.json` file mapping indices to original sentences
+* **Smart Caching:** Checks for existing embeddings to avoid redundant computation
+
+#### Search Script (`search_sbert.py`)
+
+**Stage 2: Interactive Semantic Search (Lines 19-96)**
+* **Resource Loading:** Loads pre-generated embeddings, sentence map, and model
+* **Helper Function:** `search()` encodes query and computes cosine similarity against all corpus vectors
+* **Efficient Search:** Uses NumPy vectorized operations for fast similarity computation
+* **Interactive Mode:** Provides a REPL (Read-Eval-Print Loop) for real-time queries
+* **Performance:** Sub-second search across entire corpus (much faster than Doc2Vec inference)
+
+---
+
 ## 4. Key Algorithms
 
 ### 4.1 Word2Vec: Subword Aggregation Logic
@@ -181,6 +230,37 @@ The function `find_similar_sentences()` in `run-inference-doc2vec.py` performs s
 results = find_similar_sentences("Wielka bitwa wojskowa.", top_n=5)
 # Returns 5 most similar sentences from the training corpus
 ```
+
+### 4.3 SBERT: Pre-computed Embeddings + Cosine Similarity
+
+The SBERT pipeline uses a two-phase approach: pre-computation and search.
+
+#### Phase 1: Embedding Generation (`generate-sbert.py`)
+1. **Corpus Loading:** All sentences are loaded from the corpus files
+2. **Batch Encoding:** The pre-trained transformer model encodes all sentences in batches:
+   ```python
+   embeddings = model.encode(sentences, show_progress_bar=True)
+   ```
+3. **Storage:** Embeddings are saved as a NumPy array for fast loading
+
+#### Phase 2: Semantic Search (`search_sbert.py`)
+1. **Query Encoding:** The user's query is encoded into a vector using the same model
+2. **Similarity Computation:** Cosine similarity is calculated between the query vector and all corpus vectors:
+   $$\text{similarity}(q, d_i) = \frac{\vec{q} \cdot \vec{d_i}}{||\vec{q}|| \cdot ||\vec{d_i}||}$$
+3. **Ranking:** Results are sorted by similarity score in descending order
+4. **Return:** Top-k most similar sentences are returned with their scores
+
+**Example:**
+```python
+results = search("Wielka bitwa wojskowa.", model, corpus_embeddings, sentences, top_k=5)
+# Returns 5 most similar sentences with cosine similarity scores
+# Typical execution time: < 0.1s for 100k+ sentences
+```
+
+**Key Advantages:**
+* **Speed:** Pre-computed embeddings enable instant search (no inference needed for corpus)
+* **Quality:** Transformer models capture deep semantic meaning beyond word overlap
+* **Scalability:** Can be extended with approximate nearest neighbor search (FAISS, Annoy) for millions of documents
 
 ---
 
@@ -324,5 +404,115 @@ similar = find_similar("Litwo, ojczyzno moja!", top_n=3)
 for sentence, score in similar:
     print(f"[{score:.4f}] {sentence}")
 ```
+
+---
+
+### Sentence-BERT (SBERT) Workflow
+
+#### Generating Embeddings:
+```bash
+python generate-sbert.py
+```
+This will:
+1. Load configuration from `config.py` and aggregate sentences using `utils.py`
+2. Download pre-trained model `intfloat/multilingual-e5-small` (if not cached)
+3. Generate embeddings for all corpus sentences with progress bar
+4. Save two files to the `output/` directory:
+   - `sbert_sentence_embeddings.npy` - Dense vectors (shape: [num_sentences, 384])
+   - `sbert_sentences_map.json` - Index-to-sentence mapping
+
+**Note:** If embeddings already exist, the script will ask before regenerating (useful for saving time).
+
+#### Interactive Search:
+```bash
+python search_sbert.py
+```
+This will:
+1. Load pre-computed embeddings and sentence map from `output/`
+2. Load the pre-trained model for query encoding
+3. Start an interactive REPL for real-time semantic search
+4. Display top 5 results with similarity scores and execution time
+
+**Example session:**
+```
+--- SEMANTIC SEARCH SYSTEM (SBERT) ---
+Enter a sentence to find similar in the corpus.
+Enter 'exit' or 'q' to exit.
+
+Query: Litwo, ojczyzno moja!
+Results (time: 0.043s):
+  [0.8234] Litwo, ojczyzno moja! ty jesteś jak zdrowie.
+  [0.7456] Ojczyzna to najświętsza rzecz dla Polaka.
+  [0.7123] Tęsknota za rodzinną ziemią nie opuszczała go nigdy.
+  ...
+```
+
+#### Using in Your Own Code:
+```python
+import numpy as np
+import json
+from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
+import os
+from config import (
+    OUTPUT_DIR,
+    OUTPUT_SBERT_EMBEDDINGS_FILE,
+    OUTPUT_SBERT_SENTENCES_MAP_FILE
+)
+
+# Load resources
+model = SentenceTransformer("intfloat/multilingual-e5-small")
+embeddings = np.load(os.path.join(OUTPUT_DIR, OUTPUT_SBERT_EMBEDDINGS_FILE))
+
+with open(os.path.join(OUTPUT_DIR, OUTPUT_SBERT_SENTENCES_MAP_FILE), 'r') as f:
+    sentences = json.load(f)
+
+# Perform semantic search
+def semantic_search(query, top_k=5):
+    # Encode query
+    query_embedding = model.encode([query], convert_to_numpy=True)
+    
+    # Compute similarities
+    similarities = cosine_similarity(query_embedding, embeddings)[0]
+    
+    # Get top results
+    top_indices = np.argsort(similarities)[::-1][:top_k]
+    
+    results = []
+    for idx in top_indices:
+        results.append({
+            'text': sentences[idx],
+            'score': similarities[idx]
+        })
+    return results
+
+# Example usage
+results = semantic_search("Wielka bitwa wojskowa.", top_k=3)
+for r in results:
+    print(f"[{r['score']:.4f}] {r['text']}")
+```
+
+---
+
+## 7. Comparison of Approaches
+
+| Feature | Word2Vec CBOW | Doc2Vec PV-DM | Sentence-BERT |
+| :--- | :--- | :--- | :--- |
+| **Granularity** | Word-level tokens | Sentence/document | Sentence/document |
+| **Training** | From scratch | From scratch | Pre-trained (fine-tuning optional) |
+| **Quality** | Good for word similarity | Good for document similarity | State-of-the-art semantic similarity |
+| **Speed (Training)** | Fast (~minutes) | Medium (~minutes) | Very fast (no training needed) |
+| **Speed (Inference)** | Fast | Slow (requires inference per query) | Very fast (pre-computed embeddings) |
+| **Model Size** | Small (~MBs) | Small (~MBs) | Large (~100-500MB) |
+| **Memory Usage** | Low | Low | Medium-High |
+| **Use Case** | Word analogies, morphology | Document classification, simple search | Production semantic search, clustering |
+| **Multilingual** | Depends on corpus | Depends on corpus | Yes (with multilingual models) |
+| **OOV Handling** | Via subword tokens | Via subword tokens | Via transformer tokenization |
+
+### When to Use Each:
+
+- **Word2Vec CBOW**: When you need word-level embeddings for specific domain vocabulary, word analogies, or morphological analysis
+- **Doc2Vec PV-DM**: When you want to learn document representations from scratch on domain-specific corpus without external dependencies
+- **SBERT**: When you need high-quality semantic search in production, have sufficient computational resources, and want multilingual support
 
 ---
