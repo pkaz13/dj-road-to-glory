@@ -8,6 +8,7 @@ import glob
 import shutil
 from corpora import CORPORA_FILES
 from config import TOKENIZER_FILE, OUTPUT_DIR, OUTPUT_TENSOR_FILE, OUTPUT_MAP_FILE, OUTPUT_MODEL_FILE, TRAINING_PARAMS
+from utils import aggregate_raw_sentences
 
 # Setting up logging for gensim
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
@@ -45,25 +46,6 @@ try:
 except FileNotFoundError:
     print(f"ERROR: File '{TOKENIZER_FILE}' not found. Please make sure the file exists.")
     raise
-
-# loading raw sentences from files and aggregating them
-def aggregate_raw_sentences(files):
-    raw_sentences = []
-    print("Loading text from files...")
-    print(f"Number of files to load: {len(files)}")
-    for file in files:
-        try:
-            with open(file, 'r', encoding='utf-8') as f:
-                lines = [line.strip() for line in f if line.strip()]
-                raw_sentences.extend(lines)
-        except FileNotFoundError:
-            print(f"WARNING: File '{file}' not found. Skipping.")
-            continue
-
-    if not raw_sentences:
-        print("ERROR: Input files are empty or not loaded.")
-        exit()
-    return raw_sentences
 
 raw_sentences = aggregate_raw_sentences(files)
 
